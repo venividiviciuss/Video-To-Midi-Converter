@@ -18,3 +18,15 @@ VideoToMidiConverter is an advanced tool written in Python to convert videos of 
 5. It saves the result in a MIDI file, ready to be used with any digital music software.
 
 This tool is ideal for musicians and developers looking to automate the transcription of musical performances into MIDI format from keyboard videos.
+
+## How to Use the Project:
+1. **Install the required dependencies:**
+   Make sure you have Python installed on your system. Then, navigate to the project directory and run:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   
+   Alternatively, you can install the dependencies directly using:
+   ```bash
+   pip install opencv-python Pillow numpy mido pygame
+   ```
