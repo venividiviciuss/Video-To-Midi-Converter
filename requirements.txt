@@ -1,0 +1,5 @@
+opencv-python
+Pillow
+numpy
+mido
+pygame
