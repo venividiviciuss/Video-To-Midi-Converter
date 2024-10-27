@@ -36,3 +36,23 @@ This tool is ideal for musicians and developers looking to automate the transcri
    ```bash
    python main.py
    ```
+
+3. **Upload Your Video:**
+   Ensure that the video file is of good quality and clearly shows the keyboard being played. Videos shot in good lighting conditions work best.
+
+4. **Set Parameters:**
+   Adjust the initial key and final key based on those present in the video. This helps the program focus on the relevant keys.
+   Set the start time and end time to limit the section of the video you want to convert, which can improve performance.
+   Use the Preview Window: During the conversion, use the preview window to monitor which keys are being detected in real time. This can help you verify that the program is       correctly interpreting the video.
+
+5. **Experiment with Settings:**
+   Depending on the video, you may need to experiment with different settings (like the activation threshold) to optimize the accuracy of the MIDI conversion.
+
+6. **Save Your Work:**
+   After conversion, ensure you save the resulting MIDI file properly. Test it in your preferred digital audio workstation (DAW) to check the results.
+
+## Credits
+Developed by **venividiviciuss**  
+Copyright © 2024-2025
+
+Thanks for any support and improvements you may offer. If you would like to donate, please visit: *****
