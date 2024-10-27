@@ -1,4 +1,4 @@
-### License - VideoToMidiConverter ###]
+### License - VideoToMidiConverter
 # *Copyright (C) 2024-2025 venividiviciuss*
 
 # 1. Permitted Use
@@ -21,7 +21,7 @@ The author retains all intellectual property rights related to this code. No lic
 # 5. Liability
 The code is provided "as is", without any warranties of any kind. The author is not liable for any damages or issues arising from the use of this code.
 
-### Licenza - VideoToMidiConverter ###]
+### Licenza - VideoToMidiConverter
 # *Copyright (C) 2024-2025 venividiviciuss*
 
 ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### 
