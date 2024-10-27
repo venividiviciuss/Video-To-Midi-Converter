@@ -30,3 +30,9 @@ This tool is ideal for musicians and developers looking to automate the transcri
    ```bash
    pip install opencv-python Pillow numpy mido pygame
    ```
+
+2. **Run the application:**
+   You can start the application by executing:
+   ```bash
+   python main.py
+   ```
