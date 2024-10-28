@@ -1,6 +1,7 @@
 # VideoToMidiConverter
 
 ⚠️ Warning: The code is still under development and may not function as expected. ⚠️
+😔✨ I apologize for any inconveniences! As a beginner in programming, this is my first project, and I'm still learning. Any feedback is welcome! Thank you for your understanding and support! 🙏💻
 
 **VideoToMidiConverter** is an advanced tool written in Python to convert videos of musical keyboards into MIDI files. By utilizing video frame processing, the program identifies the keys pressed on the keyboard based on brightness and generates the corresponding MIDI file. It also includes an interactive graphical user interface (GUI) that allows users to dynamically manipulate parameters to adapt the converter to different types of videos, making the program versatile and easily adaptable to various contexts of use.
 
