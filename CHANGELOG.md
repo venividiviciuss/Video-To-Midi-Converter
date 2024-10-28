@@ -13,6 +13,7 @@
 - Updated parameter settings for more flexibility in MIDI generation.
 
 ### Fixed
+---
 
 ### Known Issues
 **IMPORTANT**
