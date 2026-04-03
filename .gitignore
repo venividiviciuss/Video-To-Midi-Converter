@@ -1,0 +1,24 @@
+# File di cache di Python
+__pycache__/
+*.py[cod]
+
+# File di editor e IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# File di sistema
+.DS_Store
+Thumbs.db
+
+# Cartelle di build
+build/
+dist/
+*.spec
+build_exe.bat
+
+# Log
+*.log
+
+# Cartella Git (non committare Git dentro Git)
+.git/
