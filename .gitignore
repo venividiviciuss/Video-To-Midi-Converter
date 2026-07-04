@@ -20,5 +20,8 @@ build_exe.bat
 # Log
 *.log
 
+# User settings
+settings.json
+
 # Cartella Git (non committare Git dentro Git)
 .git/
