@@ -1,9 +1,7 @@
 ﻿import cv2
 import numpy as np
 import threading
-import time
 from mido import Message, MidiFile, MidiTrack
-import os
 
 class VideoProcessor:
     def __init__(self, video_path):
@@ -22,7 +20,6 @@ class VideoProcessor:
         self.detection_height = 10 # Height in pixels of the detection area
         self.threshold = 30
         self.start_key = 21 # MIDI Note
-        self.end_key = 108 # 88 keys (A0 - C8)
         self.key_positions = []
         self.white_threshold = 127
         self.black_threshold = 127
@@ -289,11 +286,6 @@ class VideoProcessor:
         return -1
 
     def convert_to_midi(self, output_path, progress_callback=None, status_callback=None, frame_callback=None, stop_event=None):
-        # We need to access get_text from main if possible, or just use it here if we import it.
-        # But to avoid circular imports, let's just use the callbacks and pass pre-formatted strings from main or just keys.
-        # However, to maintain current structure let's import it here.
-        from main import get_text as get_t
-            
         mid = MidiFile()
         track = MidiTrack()
         mid.tracks.append(track)
@@ -351,7 +343,8 @@ class VideoProcessor:
             
             ret, frame = self.cap.read()
             if not ret: break
-            
+            frame = self.apply_color_filter(frame)
+
             kb_line = None
             if not self.use_manual_mode:
                 kb_area = frame[y_start:y_end, :, :]

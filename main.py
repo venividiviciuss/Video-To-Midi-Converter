@@ -8,7 +8,6 @@ import threading
 import os
 import sys
 import logging
-import traceback
 import json
 import time
 
@@ -23,6 +22,7 @@ def get_resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 LOG_FILE = get_resource_path("logs.log")
+SETTINGS_FILE = get_resource_path("settings.json")
 logging.basicConfig(
     filename=LOG_FILE,
     level=logging.DEBUG,
@@ -32,6 +32,7 @@ logging.basicConfig(
 
 # Localization Loader
 LANG_DATA = {}
+LANG_CACHE = {}
 def load_translations(lang):
     global LANG_DATA
     lang_file = get_resource_path(os.path.join("Localization", f"{lang}.json"))
@@ -96,6 +97,8 @@ class ModernApp(ctk.CTk):
         self.stop_event = threading.Event()
         self.play_thread = None
         self.target_frame_selector = "start" # "start" or "end"
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
         
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -386,6 +389,8 @@ class ModernApp(ctk.CTk):
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
         self.canvas.bind("<Button-3>", self.on_canvas_right_click)
 
+        self.bind("<KeyPress>", self.handle_keypress)
+
         self.dragging_key_idx = -1
         self.resizing_key_idx = -1
         self.selected_key_idx = -1
@@ -416,6 +421,8 @@ class ModernApp(ctk.CTk):
 
         # Set default target selector
         self.set_target_selector("start")
+
+        self.load_settings()
 
     def on_slider_change(self, value):
         if not self.processor or self.is_converting: return
@@ -448,27 +455,35 @@ class ModernApp(ctk.CTk):
             self.update_preview()
 
     def toggle_language(self):
-        self.lang = "en-EN" if self.lang == "it-IT" else "it-IT"
+        if self.lang == "it-IT":
+            self.lang = "en-EN"
+        elif self.lang == "en-EN":
+            self.lang = "es-ES"
+        else:
+            self.lang = "it-IT"
         load_translations(self.lang)
         self.update_ui_text()
+        self.save_settings()
 
     def get_text_by_lang(self, key, lang):
-        # Temp load to get specific text
-        lang_file = get_resource_path(os.path.join("Localization", f"{lang}.json"))
-        if os.path.exists(lang_file):
-            try:
-                with open(lang_file, 'r', encoding='utf-8-sig') as f:
-                    data = json.load(f)
-                return data.get(key, key)
-            except: pass
-        return key
+        if lang not in LANG_CACHE:
+            lang_file = get_resource_path(os.path.join("Localization", f"{lang}.json"))
+            if os.path.exists(lang_file):
+                try:
+                    with open(lang_file, 'r', encoding='utf-8-sig') as f:
+                        LANG_CACHE[lang] = json.load(f)
+                except:
+                    LANG_CACHE[lang] = {}
+            else:
+                LANG_CACHE[lang] = {}
+        return LANG_CACHE[lang].get(key, key)
 
     def update_ui_text(self):
         self.title(get_text("title"))
         # Tab titles (must be updated via tabview)
         for tab_key in ["tab_video", "tab_auto", "tab_manual", "tab_midi", "tab_filter"]:
             for btn_key in list(self.tabview._segmented_button._buttons_dict.keys()):
-                if btn_key in [self.get_text_by_lang(tab_key, "it-IT"), self.get_text_by_lang(tab_key, "en-EN")]:
+                if btn_key in [self.get_text_by_lang(tab_key, "it-IT"), self.get_text_by_lang(tab_key, "en-EN"), self.get_text_by_lang(tab_key, "es-ES")]:
                     self.tabview._segmented_button._buttons_dict[btn_key].configure(text=get_text(tab_key))
 
         self.load_btn.configure(text=get_text("load_video"))
@@ -497,7 +512,7 @@ class ModernApp(ctk.CTk):
         # Update subtabs
         for sub_key in ["subtab_hsv", "subtab_adjust", "subtab_noise"]:
             for btn_key in list(self.filter_tabs._segmented_button._buttons_dict.keys()):
-                if btn_key in [self.get_text_by_lang(sub_key, "it-IT"), self.get_text_by_lang(sub_key, "en-EN")]:
+                if btn_key in [self.get_text_by_lang(sub_key, "it-IT"), self.get_text_by_lang(sub_key, "en-EN"), self.get_text_by_lang(sub_key, "es-ES")]:
                     self.filter_tabs._segmented_button._buttons_dict[btn_key].configure(text=get_text(sub_key))
         
         self.contrast_label.configure(text=get_text("contrast_label"))
@@ -601,12 +616,9 @@ class ModernApp(ctk.CTk):
 
     def update_navigation_ui(self):
         if not self.processor: return
-        # Update slider value without triggering command
         val = self.preview_frame_idx / self.processor.frame_count
         self.video_slider.set(val)
         self.slider_label.configure(text=f"{self.preview_frame_idx} / {self.processor.frame_count}")
-
-        self.bind("<KeyPress>", self.handle_keypress)
         
     def handle_keypress(self, event):
         if not self.processor: return
@@ -668,6 +680,17 @@ class ModernApp(ctk.CTk):
         path = filedialog.askopenfilename(filetypes=[("Video files", "*.mp4 *.avi *.mov *.mkv")])
         if path:
             self.processor = VideoProcessor(path)
+            if hasattr(self, '_saved_contour_color'):
+                self.processor.contour_color = self._saved_contour_color
+            if hasattr(self, '_saved_manual_keys') and self._saved_manual_keys:
+                self.processor.manual_keys = self._saved_manual_keys
+            # Sync saved UI values to the new processor
+            self.update_height(self.height_slider.get())
+            self.update_threshold(self.threshold_slider.get())
+            self.update_detection_height(self.area_slider.get())
+            self.toggle_manual_mode()
+            self.toggle_note_names()
+            self.update_filter_params()
             self.start_frame_entry.delete(0, tk.END)
             self.start_frame_entry.insert(0, "0")
             self.end_frame_entry.delete(0, tk.END)
@@ -909,7 +932,7 @@ class ModernApp(ctk.CTk):
             self.processor.detection_height = int(value)
             self.update_preview()
 
-    def update_preview(self, force_frame=None):
+    def update_preview(self):
         if not self.processor: return
         
         # Determine viewports to show
@@ -1135,6 +1158,130 @@ class ModernApp(ctk.CTk):
         # Close Button
         close_btn = ctk.CTkButton(self.settings_window, text=get_text("close_btn"), command=self.settings_window.destroy)
         close_btn.pack(pady=20)
+
+    def save_settings(self):
+        try:
+            data = {
+                "lang": self.lang,
+                "start_key": self.start_key_entry.get(),
+                "bpm": self.bpm_entry.get(),
+                "use_quantization": self.quantize_switch.get(),
+                "quantization_value": self.quantize_value.get(),
+                "keyboard_y": self.height_slider.get(),
+                "detection_height": self.area_slider.get(),
+                "threshold": self.threshold_slider.get(),
+                "white_threshold_factor": self.white_sens.get(),
+                "black_threshold_factor": self.black_sens.get(),
+                "use_manual_mode": self.manual_switch.get(),
+                "show_note_names": self.note_names_switch.get(),
+                "use_color_filter": self.filter_switch.get(),
+                "hsv_min": [self.hue_min_slider.get(), self.sat_min_slider.get(), self.val_min_slider.get()],
+                "hsv_max": [self.hue_max_slider.get(), self.sat_max_slider.get(), self.val_max_slider.get()],
+                "contrast": self.contrast_slider.get(),
+                "brightness": self.brightness_slider.get(),
+                "gamma": self.gamma_slider.get(),
+                "blur_size": self.blur_slider.get(),
+                "filter_iterations": self.filter_iter_slider.get(),
+                "dilate_iterations": self.dilate_slider.get(),
+                "show_binary_mask": self.binary_mask_switch.get(),
+                "use_contour_filling": self.contour_filling_switch.get(),
+                "min_contour_area": self.min_area_slider.get(),
+                "use_intelligent_filter": self.intel_filter_switch.get(),
+                "edge_detection": self.edge_switch.get(),
+                "invert_mask": self.invert_switch.get(),
+                "vp1": self.vp1_switch.get(),
+                "vp2": self.vp2_switch.get(),
+            }
+            if self.processor:
+                data["contour_color"] = list(self.processor.contour_color)
+                data["manual_keys"] = self.processor.manual_keys
+            with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            logging.error(f"Error saving settings: {e}")
+
+    def load_settings(self):
+        if not os.path.exists(SETTINGS_FILE):
+            return
+        try:
+            with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception as e:
+            logging.error(f"Error loading settings: {e}")
+            return
+
+        # Language first
+        lang = data.get("lang", "it-IT")
+        if lang in ("it-IT", "en-EN", "es-ES"):
+            self.lang = lang
+            load_translations(self.lang)
+            self.update_ui_text()
+
+        # Sliders
+        self.height_slider.set(data.get("keyboard_y", 0.75))
+        self.area_slider.set(data.get("detection_height", 10))
+        self.threshold_slider.set(data.get("threshold", 30))
+        self.contrast_slider.set(data.get("contrast", 1.0))
+        self.brightness_slider.set(data.get("brightness", 0.0))
+        self.gamma_slider.set(data.get("gamma", 1.0))
+        self.blur_slider.set(data.get("blur_size", 0))
+        self.filter_iter_slider.set(data.get("filter_iterations", 1))
+        self.dilate_slider.set(data.get("dilate_iterations", 0))
+        self.min_area_slider.set(data.get("min_contour_area", 20))
+
+        # HSV sliders
+        hsv_min = data.get("hsv_min", [0, 0, 0])
+        hsv_max = data.get("hsv_max", [180, 255, 255])
+        self.hue_min_slider.set(hsv_min[0])
+        self.hue_max_slider.set(hsv_max[0])
+        self.sat_min_slider.set(hsv_min[1])
+        self.sat_max_slider.set(hsv_max[1])
+        self.val_min_slider.set(hsv_min[2])
+        self.val_max_slider.set(hsv_max[2])
+
+        # Entries
+        self.start_key_entry.delete(0, tk.END)
+        self.start_key_entry.insert(0, str(data.get("start_key", "21")))
+        self.bpm_entry.delete(0, tk.END)
+        self.bpm_entry.insert(0, str(data.get("bpm", "120")))
+        self.white_sens.delete(0, tk.END)
+        self.white_sens.insert(0, str(data.get("white_threshold_factor", "0.7")))
+        self.black_sens.delete(0, tk.END)
+        self.black_sens.insert(0, str(data.get("black_threshold_factor", "0.3")))
+
+        # OptionMenu
+        self.quantize_value.set(data.get("quantization_value", "1/16"))
+
+        # Switches
+        self.quantize_switch.select() if data.get("use_quantization", False) else self.quantize_switch.deselect()
+        self.manual_switch.select() if data.get("use_manual_mode", False) else self.manual_switch.deselect()
+        self.note_names_switch.select() if data.get("show_note_names", False) else self.note_names_switch.deselect()
+        self.filter_switch.select() if data.get("use_color_filter", False) else self.filter_switch.deselect()
+        self.binary_mask_switch.select() if data.get("show_binary_mask", False) else self.binary_mask_switch.deselect()
+        self.contour_filling_switch.select() if data.get("use_contour_filling", False) else self.contour_filling_switch.deselect()
+        self.intel_filter_switch.select() if data.get("use_intelligent_filter", False) else self.intel_filter_switch.deselect()
+        self.edge_switch.select() if data.get("edge_detection", False) else self.edge_switch.deselect()
+        self.invert_switch.select() if data.get("invert_mask", False) else self.invert_switch.deselect()
+
+        # Checkboxes
+        if data.get("vp1", True):
+            self.vp1_switch.select()
+        else:
+            self.vp1_switch.deselect()
+        if data.get("vp2", False):
+            self.vp2_switch.select()
+        else:
+            self.vp2_switch.deselect()
+
+        # contour_color and manual_keys restored when processor is loaded
+        contour_color = data.get("contour_color")
+        if contour_color:
+            self._saved_contour_color = tuple(contour_color)
+        self._saved_manual_keys = data.get("manual_keys", [])
+
+    def on_close(self):
+        self.save_settings()
+        self.destroy()
 
     def show_credits(self):
         messagebox.showinfo(get_text("credits_title"), get_text("credits_text"))
